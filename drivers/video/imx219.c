@@ -66,11 +66,17 @@ LOG_MODULE_REGISTER(imx219, CONFIG_VIDEO_LOG_LEVEL);
 #define IMX219_REG_Y_ODD_INC_A		IMX219_REG8(0x0171)
 #define IMX219_REG_DT_PEDESTAL		IMX219_REG16(0xD1EA)
 
+#define IMX219_2DL_LINK_FREQ	456000000
+const int64_t imx219_2dl_link_frequency[] = {
+	IMX219_2DL_LINK_FREQ,
+};
+
 struct imx219_ctrls {
 	struct video_ctrl exposure;
 	struct video_ctrl brightness;
 	struct video_ctrl analogue_gain;
 	struct video_ctrl digital_gain;
+	struct video_ctrl linkfreq;
 	struct video_ctrl test_pattern;
 };
 
@@ -370,7 +376,7 @@ static int imx219_set_stream(const struct device *dev, bool on, enum video_buf_t
 {
 	const struct imx219_config *cfg = dev->config;
 
-	if (caps->type != VIDEO_BUF_TYPE_OUTPUT) {
+	if (type != VIDEO_BUF_TYPE_OUTPUT) {
 		LOG_ERR("Only output buffers supported");
 		return -EINVAL;
 	}
@@ -466,6 +472,15 @@ static int imx219_init_ctrls(const struct device *dev)
 	if (ret < 0) {
 		return ret;
 	}
+
+	ret = video_init_int_menu_ctrl(&ctrls->linkfreq, dev, VIDEO_CID_LINK_FREQ,
+				       0, imx219_2dl_link_frequency,
+				       ARRAY_SIZE(imx219_2dl_link_frequency));
+	if (ret < 0) {
+		return ret;
+	}
+
+	ctrls->linkfreq.flags |= VIDEO_CTRL_FLAG_READ_ONLY;
 
 	return video_init_menu_ctrl(&ctrls->test_pattern, dev, VIDEO_CID_TEST_PATTERN, 0,
 				    imx219_test_pattern_menu);
