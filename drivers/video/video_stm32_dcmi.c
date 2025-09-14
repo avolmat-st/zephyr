@@ -63,8 +63,26 @@ static void stm32_dcmi_process_dma_error(DCMI_HandleTypeDef *hdcmi)
 	struct video_stm32_dcmi_data *dev_data =
 		CONTAINER_OF(hdcmi, struct video_stm32_dcmi_data, hdcmi);
 
-	dev_data->restart_dma = true;
-	k_fifo_cancel_wait(&dev_data->fifo_out);
+	if (dev_data->snapshot_mode) {
+		dev_data->restart_dma = true;
+		k_fifo_cancel_wait(&dev_data->fifo_out);
+	} else {
+		LOG_DBG("Restart DMA after Error!");
+
+		/* Lets try to recover by stopping and restart the DCMI/DMA */
+		if (HAL_DCMI_Stop(&dev_data->hdcmi) != HAL_OK) {
+			LOG_WRN("HAL_DCMI_Stop FAILED!");
+			return;
+		}
+
+		/* error on last transfer try to restart it */
+		if (HAL_DCMI_Start_DMA(&dev_data->hdcmi, DCMI_MODE_CONTINUOUS,
+				       (uint32_t)dev_data->vbuf->buffer,
+				       dev_data->vbuf->size / 4) != HAL_OK) {
+			LOG_WRN("Continuous: HAL_DCMI_Start_DMA FAILED!");
+			return;
+		}
+	}
 }
 
 void HAL_DCMI_ErrorCallback(DCMI_HandleTypeDef *hdcmi)
@@ -372,11 +390,6 @@ static int video_stm32_dcmi_dequeue(const struct device *dev, struct video_buffe
 			}
 		} else {
 			LOG_DBG("Snapshot: restart after timeout");
-		}
-	} else {
-		err = video_stm32_restart_dma_after_error(data);
-		if (err < 0) {
-			return err;
 		}
 	}
 
