@@ -49,6 +49,11 @@ config VIDEO_PIXEL_FORMAT
 	help
 	  Pixel format of the video frame. If not set, the default pixel format is used.
 
+config VIDEO_ENCODED_PIXEL_FORMAT
+	string "Pixel format of the encoded frame"
+	help
+	  Pixel format of the encoded frame.
+
 config VIDEO_CAPTURE_N_BUFFERING
 	int "Capture N-buffering"
 	default 2

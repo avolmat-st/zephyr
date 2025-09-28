@@ -43,7 +43,6 @@ int configure_encoder()
 	struct video_buffer *buffer;
 	struct video_format fmt;
 	struct video_caps caps;
-	enum video_buf_type type = VIDEO_BUF_TYPE_OUTPUT;
 	uint32_t size;
 
 	encoder_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_videoenc));
@@ -55,14 +54,14 @@ int configure_encoder()
 	LOG_INF("Encoder video device: %s", encoder_dev->name);
 
 	/* Get capabilities */
-	caps.type = type;
+	caps.type = VIDEO_BUF_TYPE_INPUT;
 	if (video_get_caps(encoder_dev, &caps)) {
 		LOG_ERR("Unable to retrieve video capabilities");
 		return -1;
 	}
 
 	/* Get default/native format */
-	fmt.type = type;
+	fmt.type = VIDEO_BUF_TYPE_INPUT;
 	if (video_get_format(encoder_dev, &fmt)) {
 		LOG_ERR("Unable to retrieve video format");
 		return -1;
@@ -88,22 +87,36 @@ int configure_encoder()
 		return -1;
 	}
 
+	/* Same format at output side - but with the CONFIG_VIDEO_ENCODED_PIXEL_FORMAT */
+	fmt.type = VIDEO_BUF_TYPE_OUTPUT;
+	fmt.pixelformat = VIDEO_FOURCC_FROM_STR(CONFIG_VIDEO_ENCODED_PIXEL_FORMAT);
+	if (video_set_format(encoder_dev, &fmt)) {
+		LOG_ERR("Unable to set format");
+		return -1;
+	}
+
 	printk("Video device detected, format: %s %ux%u\n",
 		VIDEO_FOURCC_TO_STR(fmt.pixelformat), fmt.width, fmt.height);
 
 	/* Alloc output buffer */
-	size = fmt.width * fmt.height / ESTIMATED_COMPRESSION_RATIO;
+	/*
+	 * TODO - we need to be able to get from the driver would be the estimated
+	 * frame size in order to allocate the buffer properly
+	 * For JPEG, I set it to width * height quite arbitrarly
+	 */
+//	size = fmt.width * fmt.height / ESTIMATED_COMPRESSION_RATIO;
+	size = fmt.width * fmt.height;
 	buffer = video_buffer_aligned_alloc(size, CONFIG_VIDEO_BUFFER_POOL_ALIGN,
 					    K_FOREVER);
 	if (buffer == NULL) {
 		LOG_ERR("Unable to alloc compressed video buffer size=%d", size);
 		return -1;
 	}
-	buffer->type = type;
+	buffer->type = VIDEO_BUF_TYPE_OUTPUT;
 	video_enqueue(encoder_dev, buffer);
 
 	/* Start video capture */
-	if (video_stream_start(encoder_dev, type)) {
+	if (video_stream_start(encoder_dev, VIDEO_BUF_TYPE_OUTPUT)) {
 		LOG_ERR("Unable to start video");
 		return -1;
 	}

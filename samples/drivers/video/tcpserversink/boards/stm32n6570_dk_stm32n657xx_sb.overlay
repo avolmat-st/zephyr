@@ -6,10 +6,10 @@
 
 / {
 	chosen {
-		zephyr,videoenc = &venc;
+		zephyr,videoenc = &jpeg;
 	};
 };
 
-&venc {
+&jpeg {
 	status = "okay";
 };
