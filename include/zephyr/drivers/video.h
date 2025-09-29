@@ -281,6 +281,66 @@ struct video_selection {
 	struct video_rect rect;
 };
 
+struct video_queue {
+	/*
+	 * TODO - we might want a buffer type for the queue so that video_queue / video_dequeue
+	 * can also check themself for the buffer type validity
+	 */
+	struct k_fifo fifo_in;
+	struct k_fifo fifo_out;
+	bool is_streaming;
+};
+
+static inline void video_queue_init(struct video_queue *q)
+{
+	k_fifo_init(&q->fifo_in);
+	k_fifo_init(&q->fifo_out);
+	q->is_streaming = false;
+}
+
+static inline bool video_is_queue_empty(struct video_queue *q)
+{
+	return k_fifo_is_empty(q->fifo_in);
+}
+
+static inline void video_queue_add(struct video_queue *q, struct video_buffer *vbuf)
+{
+	k_fifo_put(q->fifo_in, vbuf);
+}
+
+static inline void video_queue_done(struct video_queue *q, struct video_buffer *vbuf)
+{
+	k_fifo_put(q->fifo_out, vbuf);
+}
+
+enum video_dev_type {
+	VIDEO_DEVICE_TYPE_SIMPLE,
+	VIDEO_DEVICE_TYPE_M2M,
+};
+
+struct video_dev_entry {
+	struct video_format fmt;
+	struct video_queue queue;
+};
+
+struct video_dev_common {
+	const struct device *dev;
+	enum video_dev_type type;
+};
+
+struct video_dev_hdr {
+	struct video_dev_common common;
+
+	struct video_dev_entry entry;
+};
+
+struct video_dev_m2m_hdr {
+	struct video_dev_common common;
+
+	struct video_dev_entry in;
+	struct video_dev_entry out;
+};
+
 /**
  * @typedef video_api_format_t
  * @brief Function pointer type for video_set/get_format()
@@ -379,6 +439,8 @@ typedef int (*video_api_set_signal_t)(const struct device *dev, struct k_poll_si
  */
 typedef int (*video_api_selection_t)(const struct device *dev, struct video_selection *sel);
 
+typedef int (*video_api_m2m_codec)(const struct device *dev, struct video_buffer *in, struct video_buffer *out);
+
 __subsystem struct video_driver_api {
 	/* mandatory callbacks */
 	video_api_format_t set_format;
@@ -397,6 +459,7 @@ __subsystem struct video_driver_api {
 	video_api_enum_frmival_t enum_frmival;
 	video_api_selection_t set_selection;
 	video_api_selection_t get_selection;
+	video_api_m2m_codec m2m_codec;
 };
 
 /**
@@ -976,6 +1039,89 @@ void video_closest_frmival(const struct device *dev, struct video_frmival_enum *
  * @param lane_nb Number of CSI-2 lanes used
  */
 int64_t video_get_csi_link_freq(const struct device *dev, uint8_t bpp, uint8_t lane_nb);
+
+static inline void video_dev_init(const struct device *dev)
+{
+	struct video_dev_common *common = (struct video_dev_common *)dev->data;
+
+	if (common->type == VIDEO_DEVICE_TYPE_SIMPLE) {
+		struct video_dev_hdr *video_dev = (struct video_dev_hdr *)dev->data;
+
+		video_queue_init(&video_dev->entry.queue);
+	} else {
+		struct video_dev_m2m_hdr *video_m2m_dev = (struct video_dev_m2m_hdr *)dev->data;
+		const struct video_driver_api *api = (const struct video_driver_api *)dev->api;
+
+		__ASSERT_NO_MSG(api->m2m_codec != NULL);
+
+		video_queue_init(&video_dev->in.queue);
+		video_queue_init(&video_dev->in.queue);
+	}
+}
+
+static inline int video_enqueue(const struct device *dev, struct video_buffer *vbuf)
+{
+	struct video_dev_common *common = (struct video_dev_common *)dev->data;
+	int ret = 0;
+
+	if (common->type == VIDEO_DEVICE_TYPE_SIMPLE) {
+		struct video_dev_hdr *video_dev = (struct video_dev_hdr *)dev->data;
+
+		/* TODO - check for the buffer type validity */
+
+		video_queue_add(&video_dev->entry.queue, vbuf);
+	} else {
+		struct video_dev_m2m_hdr *video_m2m_dev = (struct video_dev_m2m_hdr *)dev->data;
+		struct video_dev_entry *entry = vbuf->type == VIDE_BUF_TYPE_INPUT ?
+						&video_m2m_dev->in, &video_m2m_dev->out;
+
+		video_queue_add(&entry->queue, vbuf);
+
+		/* Check if we should run the codec if there is available buffer in both in & out */
+		if (video_m2m_dev->in.queue.is_streaming && video_m2m_dev->out.queue.is_streaming &&
+		    !video_queue_is_empty(&video_m2m_dev->in.queue) &&
+		    !video_queue_is_empty(&video_m2m_dev->out.queue)) {
+			const struct video_driver_api *api =
+				(const struct video_driver_api *)dev->api;
+			struct video_buffer *in = k_fifo_get(&video_m2m_dev->in.queue.fifo_in,
+							     K_NO_WAIT);
+			struct video_buffer *out = k_fifo_get(&video_m2m_dev->out.queue.fifo_in,
+							     K_NO_WAIT);
+
+			ret = api->m2m_codec(dev, in, out);
+		}
+	}
+
+	return ret;
+}
+
+static inline int video_dequeue(const struct device *dev, struct video_buffer **vbuf,
+				k_timeout_t timeout)
+{
+	struct video_dev_common *common = (struct video_dev_common *)dev->data;
+	struct video_queue *queue;
+	int ret = 0;
+
+	if (common->type == VIDEO_DEVICE_TYPE_SIMPLE) {
+		struct video_dev_hdr *video_dev = (struct video_dev_hdr *)dev->data;
+
+		/* TODO - check for the buffer type validity */
+
+		queue = &video_dev->entry.queue;
+	} else {
+		struct video_dev_m2m_hdr *video_m2m_dev = (struct video_dev_m2m_hdr *)dev->data;
+
+		queue = vbuf->type == VIDE_BUF_TYPE_INPUT ?
+				      &video_m2m_dev->in.queue, &video_m2m_dev->out.queue;
+	}
+
+	*vbuf = k_fifo_get(&queue.fifo_out, timeout);
+	if (*vbuf == NULL) {
+		return -EAGAIN;
+	}
+
+	return 0;
+}
 
 /**
  * @defgroup video_pixel_formats Video pixel formats
