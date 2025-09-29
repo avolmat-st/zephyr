@@ -35,22 +35,20 @@ enum stm32_jpeg_state {
 	STM32_JPEG_RUNNING,
 };
 
-struct video_common_header {
+struct video_common_hdr {
 	struct video_format fmt;
-	struct k_fifo fifo_in;
-	struct k_fifo fifo_out;
-	bool is_streaming;
+	struct video_queue queue;
 };
 
-struct video_m2m_common {
-	struct video_common_header in;
-	struct video_common_header out;
+struct video_m2m_common_hdr {
+	struct video_common_hdr in;
+	struct video_common_hdr out;
 };
 
 #define YCBCR_420_MCU_BLOCK_SIZE	384	/* 4 8x8 Y, 1 8x8 Cb, 1 8x8 Cr */
 struct stm32_jpeg_data {
+	struct video_m2m_common_hdr m2m;
 	const struct device *dev;
-	struct video_m2m_common m2m;
 	JPEG_HandleTypeDef hjpeg;
 	struct k_mutex lock;
 	enum stm32_jpeg_state state;
@@ -158,22 +156,15 @@ static struct stm32_jpeg_fmt_conf *stm32_jpeg_get_conf(uint32_t pixelformat)
 	return NULL;
 }
 
-static int stm32_jpeg_start_codec(const struct device *dev)
+static int stm32_jpeg_m2m_codec(const struct device *dev, struct video_buffer *in,
+				struct video_buffer *out)
 {
 	struct stm32_jpeg_data *data = dev->data;
 	JPEG_ConfTypeDef Conf = {0};
-	struct k_fifo *in_fifo_in = &data->m2m.in.fifo_in;
-	struct k_fifo *out_fifo_in = &data->m2m.out.fifo_in;
 	int ret;
 
-	if (k_fifo_is_empty(in_fifo_in) || k_fifo_is_empty(out_fifo_in)) {
-		/* Nothing to do */
-		data->state = STM32_JPEG_WAIT_FOR_BUFFER;
-		return 0;
-	}
-
-	data->current_in = k_fifo_get(in_fifo_in, K_NO_WAIT);
-	data->current_out = k_fifo_get(out_fifo_in, K_NO_WAIT);
+	data->current_in = in;
+	data->current_out = out;
 
 	if (data->m2m.in.fmt.pixelformat != VIDEO_PIX_FMT_JPEG) {
 		struct stm32_jpeg_fmt_conf *conf =
@@ -258,8 +249,8 @@ void HAL_JPEG_EncodeCpltCallback(JPEG_HandleTypeDef *hjpeg)
 	k_mutex_lock(&data->lock, K_FOREVER);
 
 	/* Give back the buffers to the application */
-	k_fifo_put(&data->m2m.in.fifo_out, data->current_in);
-	k_fifo_put(&data->m2m.out.fifo_out, data->current_out);
+	video_queue_done(&data->m2m.in.queue, data->current_in);
+	video_queue_done(&data->m2m.out.queue, data->current_out);
 
 	/* Try to restart the next processing if needed */
 	ret = stm32_jpeg_start_codec(data->dev);
@@ -311,7 +302,7 @@ static int stm32_jpeg_get_fmt(const struct device *dev, struct video_format *fmt
 static int stm32_jpeg_set_fmt(const struct device *dev, struct video_format *fmt)
 {
 	struct stm32_jpeg_data *data = dev->data;
-	struct video_common_header *common =
+	struct video_common_hdr *common =
 		fmt->type == VIDEO_BUF_TYPE_INPUT ? &data->m2m.in : &data->m2m.out;
 	struct stm32_jpeg_fmt_conf *conf;
 	int ret = 0;
@@ -345,7 +336,7 @@ out:
 static int stm32_jpeg_set_stream(const struct device *dev, bool enable, enum video_buf_type type)
 {
 	struct stm32_jpeg_data *data = dev->data;
-	struct video_common_header *common =
+	struct video_common_hdr *common =
 		type == VIDEO_BUF_TYPE_INPUT ? &data->m2m.in : &data->m2m.out;
 	int ret = 0;
 
@@ -381,49 +372,6 @@ out:
 	k_mutex_unlock(&data->lock);
 
 	return ret;
-}
-
-static int stm32_jpeg_enqueue(const struct device *dev, struct video_buffer *vbuf)
-{
-	struct stm32_jpeg_data *data = dev->data;
-	struct video_common_header *common =
-		vbuf->type == VIDEO_BUF_TYPE_INPUT ? &data->m2m.in : &data->m2m.out;
-	int ret = 0;
-
-	/* TODO - need to check for buffer size here */
-
-	k_mutex_lock(&data->lock, K_FOREVER);
-
-	k_fifo_put(&common->fifo_in, vbuf);
-
-	/* Try to start codec if necessary */
-	if (data->state == STM32_JPEG_WAIT_FOR_BUFFER) {
-		ret = stm32_jpeg_start_codec(dev);
-		if (ret) {
-			LOG_ERR("Failed to start codec, err: %d", ret);
-			goto out;
-		}
-	}
-
-out:
-	k_mutex_unlock(&data->lock);
-
-	return ret;
-}
-
-static int stm32_jpeg_dequeue(const struct device *dev, struct video_buffer **vbuf,
-			      k_timeout_t timeout)
-{
-	struct stm32_jpeg_data *data = dev->data;
-	struct video_common_header *common =
-		(*vbuf)->type == VIDEO_BUF_TYPE_INPUT ? &data->m2m.in : &data->m2m.out;
-
-	*vbuf = k_fifo_get(&common->fifo_out, timeout);
-	if (*vbuf == NULL) {
-		return -EAGAIN;
-	}
-
-	return 0;
 }
 
 static const struct video_format_cap stm32_jpeg_fmts[] = {
@@ -463,9 +411,10 @@ static DEVICE_API(video, stm32_jpeg_driver_api) = {
 	.set_format = stm32_jpeg_set_fmt,
 	.get_format = stm32_jpeg_get_fmt,
 	.set_stream = stm32_jpeg_set_stream,
-	.enqueue = stm32_jpeg_enqueue,
-	.dequeue = stm32_jpeg_dequeue,
+	.enqueue = video_m2m_enqueue,
+	.dequeue = video_m2m_dequeue,
 	.get_caps = stm32_jpeg_get_caps,
+	.m2m_codec = stm32_jpeg_m2m_codec,
 };
 
 static int stm32_jpeg_enable_clock(const struct device *dev)
@@ -515,10 +464,8 @@ static int stm32_jpeg_init(const struct device *dev)
 
 	/* Initialise default input / output formats */
 	k_mutex_init(&data->lock);
-	k_fifo_init(&data->m2m.in.fifo_in);
-	k_fifo_init(&data->m2m.in.fifo_out);
-	k_fifo_init(&data->m2m.out.fifo_in);
-	k_fifo_init(&data->m2m.out.fifo_out);
+	video_queue_init(&data->m2m.in.queue);
+	video_queue_init(&data->m2m.out.queue);
 
 	/* Initialize default formats */
 	data->m2m.in.fmt.type = VIDEO_BUF_TYPE_INPUT;
