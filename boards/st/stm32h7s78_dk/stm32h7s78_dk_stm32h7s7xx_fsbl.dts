@@ -1,0 +1,20 @@
+/*
+ * Copyright (c) 2025 STMicroelectronics
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include "stm32h7s78_dk.dts"
+
+/*
+ * Define the device, controller and partition to be the external memory
+ * for running the application in external NOR from MCUboot
+ */
+/ {
+	chosen {
+		zephyr,flash = &mx66uw1g45;
+		zephyr,flash-controller = &mx66uw1g45;
+		zephyr,code-partition = &slot0_partition;
+	};
+};
