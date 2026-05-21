@@ -10,6 +10,7 @@ supported:
   - adc
   - arduino_gpio
   - crc
+  - display
   - dma
   - entropy
   - gpio

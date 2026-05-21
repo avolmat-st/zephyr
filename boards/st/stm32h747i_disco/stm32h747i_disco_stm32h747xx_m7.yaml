@@ -9,6 +9,7 @@ ram: 512
 flash: 1024
 supported:
   - arduino_gpio
+  - display
   - gpio
   - arduino_spi
   - spi

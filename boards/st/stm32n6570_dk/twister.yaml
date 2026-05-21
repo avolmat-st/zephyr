@@ -12,6 +12,7 @@ supported:
   - can
   - counter
   - crc
+  - display
   - dma
   - i2c
   - gpio

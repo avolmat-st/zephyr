@@ -9,6 +9,7 @@ ram: 384
 flash: 2048
 supported:
   - arduino_i2c
+  - display
   - i2c
   - spi
   - arduino_spi

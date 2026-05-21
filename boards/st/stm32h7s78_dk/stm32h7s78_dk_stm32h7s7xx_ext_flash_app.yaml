@@ -9,6 +9,7 @@ flash: 61439  # size in kB of 1 app slot minus MCUboot header size (1KB)
 sysbuild: true
 supported:
   - arduino_gpio
+  - display
   - gpio
   - uart
   - watchdog
