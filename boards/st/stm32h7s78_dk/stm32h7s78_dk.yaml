@@ -19,5 +19,6 @@ supported:
   - uart
   - usb_device
   - usbd
+  - video
   - watchdog
 vendor: st

@@ -16,4 +16,5 @@ supported:
   - qspi
   - memc
   - usb_device
+  - video
 vendor: st

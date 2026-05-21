@@ -19,4 +19,5 @@ supported:
   - memc
   - netif:eth
   - rtc
+  - video
 vendor: st

@@ -20,3 +20,4 @@ supported:
   - spi
   - uart
   - usb_device
+  - video
