@@ -45,6 +45,18 @@
 #define LV_OS_CUSTOM_INCLUDE "lvgl_zephyr_osal.h"
 #endif /* CONFIG_LV_Z_USE_OSAL */
 
+#ifdef CONFIG_LV_Z_NEMA_GFX
+#if defined(CONFIG_CPU_CORTEX_M33)
+#define LV_USE_NEMA_LIB	LV_NEMA_LIB_M33_REVC
+#elif defined(CONFIG_CPU_CORTEX_M55)
+#define LV_USE_NEMA_LIB	LV_NEMA_LIB_M55
+#elif defined(CONFIG_CPU_CORTEX_M7)
+#define LV_USE_NEMA_LIB	LV_NEMA_LIB_M7
+#else
+#define LV_USE_NEMA_LIB	LV_NEMA_LIB_NONE
+#endif
+#endif /* CONFIG_LV_Z_NEMA_GFX */
+
 /*
  * Needed because of a workaround for a GCC bug,
  * see https://github.com/lvgl/lvgl/issues/3078

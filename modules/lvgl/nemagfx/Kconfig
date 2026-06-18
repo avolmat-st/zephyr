@@ -2,12 +2,22 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-menu "LVGL Zephyr NemaGFX support"
+config LV_Z_NEMA_GFX
+	bool "LVGL Zephyr NemaGFX support"
+	select LV_USE_NEMA_GFX
+	imply FPU
 
-if LV_USE_NEMA_GFX && LV_NEMA_HAL_CUSTOM
+if LV_Z_NEMA_GFX
 
-config FPU
-	default y
+choice LV_USE_NEMA_HAL
+	default LV_NEMA_HAL_CUSTOM
+endchoice
+
+choice LV_USE_NEMA_LIB
+	default LV_NEMA_LIB_M33_REVC if CPU_CORTEX_M33
+	default LV_NEMA_LIB_M55 if CPU_CORTEX_M55
+	default LV_NEMA_LIB_M7 if CPU_CORTEX_M7
+endchoice
 
 config LV_Z_NEMA_GFX_MULTI_THREAD
 	bool "Multi-thread support for NemaGFX"
@@ -19,6 +29,4 @@ config LV_Z_NEMA_HAL_RING_SIZE
 	help
 	  Size of the NemaGFX command ring.
 
-endif # LV_USE_NEMA_GFX
-
-endmenu
+endif # LV_Z_NEMA_GFX
