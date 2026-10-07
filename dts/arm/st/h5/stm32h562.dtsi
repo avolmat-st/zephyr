@@ -619,6 +619,19 @@
 				};
 			};
 		};
+
+		dcmi: dcmi@4202c000 {
+			compatible = "st,stm32-dcmi";
+			reg = <0x4202c000 0x400>;
+			interrupts = <108 0>;
+			interrupt-names = "dcmi";
+			clocks = <&rcc STM32_CLOCK(AHB2, 12)>;
+			dmas = <&gpdma1 1 108 (STM32_DMA_PERIPH_TO_MEMORY |
+					       STM32_DMA_PERIPH_NO_INC | STM32_DMA_MEM_INC |
+					       STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS |
+					       STM32_DMA_PRIORITY_HIGH)>;
+			status = "disabled";
+		};
 	};
 
 	smbus3: smbus3 {
