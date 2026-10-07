@@ -1,0 +1,54 @@
+# Copyright (c) 2026 STMicroelectronics
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  GPIO pins exposed on the 40-pin connector found on some STM32 boards
+  such as B-U585I-IOT02A. The connector is only available on the
+  B-CAMS-OMV board which allows to connect a 40-pin connector based
+  camera module to a 30-pin ZIF connector on a STM32 board.
+
+  Connector layout:
+    (1)   NC
+    (2)   NC
+    (3)   GND
+    (4)   GND
+    (5)   NC
+    (6)   DCMI_D11
+    (7)   GND
+    (8)   GND
+    (9)   NC
+    (10)  NC
+    (11)  GND
+    (12)  GND
+    (13)  I2C_SCL
+    (14)  I2C_SDA
+    (15)  PLUG
+    (16)  GND
+    (17)  RSTI
+    (18)  NC
+    (19)  XSDN
+    (20)  NC
+    (21)  GND
+    (22)  GND
+    (23)  DCMI_D0
+    (24)  DCMI_D1
+    (25)  DCMI_D2
+    (26)  DCMI_D3
+    (27)  DCMI_D4
+    (28)  DCMI_D5
+    (29)  DCMI_D6
+    (30)  DCMI_D7
+    (31)  DCMI_HSYNC
+    (32)  DCMI_VSYNC
+    (33)  DCMI_PIXCLK
+    (34)  NC
+    (35)  NC
+    (36)  NC
+    (37)  GND
+    (38)  GND
+    (39)  2.8V
+    (40)  2.8V
+
+compatible: "st,dvp-cam-40-connector"
+
+include: [gpio-nexus.yaml, base.yaml]

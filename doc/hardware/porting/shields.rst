@@ -145,6 +145,7 @@ These describe connections to cameras and displays (strictly speaking not shield
 - :dtcompatible:`raspberrypi,csi-connector`
 - :dtcompatible:`st,dsi-lcd-qsh-030-connector`
 - :dtcompatible:`st,dvp-cam-zif-30-connector`
+- :dtcompatible:`st,dvp-cam-40-connector`
 - :dtcompatible:`weact,dcmi-camera-connector`
 
 
