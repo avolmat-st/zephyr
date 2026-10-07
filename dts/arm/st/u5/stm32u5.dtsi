@@ -1084,6 +1084,19 @@
 			resets = <&rctl STM32_RESET(AHB1, 20)>;
 			status = "disabled";
 		};
+
+		dcmi: dcmi@4202c000 {
+			compatible = "st,stm32-dcmi";
+			reg = <0x4202c000 0x400>;
+			interrupts = <119 0>;
+			interrupt-names = "dcmi";
+			clocks = <&rcc STM32_CLOCK(AHB2, 12)>;
+			dmas = <&gpdma1 1 86 (STM32_DMA_PERIPH_TO_MEMORY |
+					       STM32_DMA_PERIPH_NO_INC | STM32_DMA_MEM_INC |
+					       STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS |
+					       STM32_DMA_PRIORITY_HIGH)>;
+			status = "disabled";
+		};
 	};
 
 	swj_port: swj_port {
