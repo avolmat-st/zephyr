@@ -286,3 +286,11 @@ zephyr_udc0: &usbotg_hs {
 &dma2d {
 	status = "okay";
 };
+
+&dma1 {
+	status = "okay";
+};
+
+&dma2 {
+	status = "okay";
+};

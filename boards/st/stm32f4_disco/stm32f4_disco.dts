@@ -196,6 +196,10 @@ zephyr_udc0: &usbotg_fs {
 	status = "okay";
 };
 
+&dma2 {
+	status = "okay";
+};
+
 &plli2s {
 	/* Minimize audio clock error (with i2s mck-enabled) for all of:
 	 * - 22.05kHz / 16b, 24b or 32b
