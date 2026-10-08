@@ -67,6 +67,28 @@
 		led0 = &green_led_1;
 		sw0 = &user_button;
 	};
+
+	dcmi_camera_connector: connector_dcmi_camera {
+		compatible = "st,dvp-cam-zif-30-connector";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map = <3 0 &gpioh  7 0>,  /* I2C3_SCL */
+			   <4 0 &gpioh  8 0>,  /* I2C3_SDA */
+			   /* RESET is directly connected to MCU reset */
+			   <6 0 &gpioh 13 0>,  /* PWDN_EN */
+			   <12 0 &gpiog 9 0>,  /* DCMI_VSYNC */
+			   <14 0 &gpioa 4 0>,  /* DCMI_HSYNC */
+			   <16 0 &gpioa 6 0>,  /* DCMI_PIXCK */
+			   <20 0 &gpioe 6 0>,  /* DCMI_D7 */
+			   <21 0 &gpioe 5 0>,  /* DCMI_D6 */
+			   <22 0 &gpiod 3 0>,  /* DCMI_D5 */
+			   <23 0 &gpioh 14 0>,  /* DCMI_D4 */
+			   <24 0 &gpioh 12 0>,  /* DCMI_D3 */
+			   <25 0 &gpioh 11 0>,  /* DCMI_D2 */
+			   <26 0 &gpioh 10 0>,  /* DCMI_D1 */
+			   <27 0 &gpioh  9 0>;  /* DCMI_D0 */
+	};
 };
 
 &clk_lsi {
@@ -113,7 +135,7 @@
 	clock-frequency = <I2C_BITRATE_FAST>;
 };
 
-&i2c3 {
+st_cam_i2c: &i2c3 {
 	pinctrl-0 = <&i2c3_scl_ph7 &i2c3_sda_ph8>;
 	pinctrl-names = "default";
 	scl-gpios = <&gpioh 7 GPIO_ACTIVE_HIGH>;
@@ -329,4 +351,11 @@ zephyr_udc0: &usbotg_fs {
 
 &dma2 {
 	status = "okay";
+};
+
+st_cam_dvp: &dcmi {
+	pinctrl-0 = <&dcmi_pixclk_pa6 &dcmi_hsync_pa4 &dcmi_vsync_pg9 &dcmi_d0_ph9
+		     &dcmi_d1_ph10 &dcmi_d2_ph11 &dcmi_d3_ph12 &dcmi_d4_ph14
+		     &dcmi_d5_pd3 &dcmi_d6_pe5 &dcmi_d7_pe6>;
+	pinctrl-names = "default";
 };
