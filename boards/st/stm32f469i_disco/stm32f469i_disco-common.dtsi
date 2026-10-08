@@ -269,3 +269,11 @@ zephyr_udc0: &usbotg_fs {
 		vfront-porch = <16>;
 	};
 };
+
+&dma1 {
+	status = "okay";
+};
+
+&dma2 {
+	status = "okay";
+};

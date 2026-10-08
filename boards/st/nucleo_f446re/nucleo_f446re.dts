@@ -211,3 +211,11 @@
 		};
 	};
 };
+
+&dma1 {
+	status = "okay";
+};
+
+&dma2 {
+	status = "okay";
+};
