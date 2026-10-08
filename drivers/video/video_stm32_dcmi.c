@@ -177,9 +177,6 @@ static int stm32_dma_init(const struct device *dev)
 		return ret;
 	}
 
-	dma_cfg->dma_slot = DMA_REQUEST_DCMI;
-	dma_cfg->channel_direction = PERIPHERAL_TO_MEMORY;
-
 	ret = dma_stm32_zcfg_to_halcfg(dma->dma_dev, dma_cfg, &hdma.Init,
 				       DMA_ADDR_ADJ_NO_CHANGE, DMA_ADDR_ADJ_INCREMENT);
 	if (ret < 0) {
