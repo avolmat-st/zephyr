@@ -339,3 +339,11 @@ zephyr_jpegenc: &jpeg {
 &dma2d {
 	status = "okay";
 };
+
+&dma1 {
+	status = "okay";
+};
+
+&dma2 {
+	status = "okay";
+};
