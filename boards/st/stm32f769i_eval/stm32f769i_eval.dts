@@ -44,6 +44,32 @@
 			   <57 0 &gpiok 7 0>;	/* RESET */
 	};
 
+	dvp_cam_40: connector_dvp_cam {
+		compatible = "st,dvp-cam-40-connector";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map = <5 0 &gpiod 6 0>,	/* DCMI_D10 */
+			   <6 0 &gpiod 2 0>,	/* DCMI_D11 */
+			   <9 0 &gpioc 10 0>,	/* DCMI_D8 */
+			   <10 0 &gpioc 12 0>,	/* DCMI_D9 */
+			   <13 0 &gpiob 8 0>,	/* I2C1_SCL */
+			   <14 0 &gpiob 9 0>,	/* I2C1_SDA */
+			   <15 0 &mfx 12 0>,	/* Camera PLUG */
+			   <17 0 &mfx 11 0>,	/* RSTI */
+			   <19 0 &mfx 0 0>,	/* XSDN */
+			   <23 0 &gpioc 6 0>,	/* DCMI_D0 */
+			   <24 0 &gpioc 7 0>,	/* DCMI_D1 */
+			   <25 0 &gpioc 8 0>,	/* DCMI_D2 */
+			   <26 0 &gpioc 9 0>,	/* DCMI_D3 */
+			   <27 0 &gpioc 11 0>,	/* DCMI_D4 */
+			   <28 0 &gpiod 3 0>,	/* DCMI_D5 */
+			   <29 0 &gpioe 5 0>,	/* DCMI_D6 */
+			   <30 0 &gpioe 6 0>,	/* DCMI_D7 */
+			   <31 0 &gpioa 4 0>,	/* DCMI_HSYNC */
+			   <32 0 &gpiob 7 0>,	/* DCMI_VSYNC */
+			   <33 0 &gpioa 6 0>;	/* DCMI_PCLK */
+	};
 	aliases {
 		led0 = &green_led_1;
 		led1 = &orange_led_2;
@@ -211,3 +237,13 @@ qsh_030_i2c: &i2c1 {
 zephyr_mipi_dsi: &mipi_dsi {};
 
 zephyr_lcd_controller: &ltdc {};
+
+/* alias used by camera shields */
+st_cam_i2c: &i2c1 {};
+
+st_cam_dvp: &dcmi {
+	pinctrl-0 = <&dcmi_d0_pc6 &dcmi_d1_pc7 &dcmi_d2_pc8 &dcmi_d3_pc9 &dcmi_d4_pc11
+		     &dcmi_d5_pd3 &dcmi_d6_pe5 &dcmi_d7_pe6 &dcmi_d8_pc10 &dcmi_d9_pc12
+		     &dcmi_d10_pd6 &dcmi_d11_pd2 &dcmi_pixclk_pa6 &dcmi_hsync_pa4 &dcmi_vsync_pb7>;
+	pinctrl-names = "default";
+};
