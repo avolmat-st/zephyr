@@ -1,0 +1,6 @@
+shield:
+  name: st_mb1379_cam
+  full_name: ST MB1379 Camera module
+  vendor: st
+  supported_features:
+    - video
