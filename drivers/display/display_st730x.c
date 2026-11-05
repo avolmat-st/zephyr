@@ -117,6 +117,7 @@ struct st730x_config {
 	const struct device *mipi_dev;
 	const struct mipi_dbi_config dbi_config;
 	const struct st730x_specific *specifics;
+	const pixel_format_t *supported_pixel_formats;
 	uint16_t height;
 	uint16_t width;
 	uint16_t start_line;
@@ -609,14 +610,12 @@ static void st730x_get_capabilities(const struct device *dev, struct display_cap
 
 	caps->x_resolution = config->width;
 	caps->y_resolution = config->height;
-	if (config->bppx > 1 || config->bppy > 1) {
-		caps->supported_pixel_formats = PIXEL_FORMAT_MONO01 | PIXEL_FORMAT_I_4;
+	caps->supported_pixel_formats = config->supported_pixel_formats;
 #if defined(CONFIG_DISPLAY_COLOR_PALETTE)
+	if (config->bppx > 1 || config->bppy > 1) {
 		memcpy(caps->color_palette, config->color_palette, sizeof(config->color_palette));
-#endif
-	} else {
-		caps->supported_pixel_formats = PIXEL_FORMAT_MONO01;
 	}
+#endif
 	caps->current_pixel_format = data->current_pixel_format;
 	caps->screen_info = 0;
 #if defined(CONFIG_DISPLAY_COLOR_DITHER)
@@ -751,6 +750,9 @@ static const struct st730x_specific st7306_specifics = {
 
 #define ST730X_BPPX(node_id) COND_CASE_1(ST730X_IS_RBW(node_id), (2), (1))
 #define ST730X_BPPY(node_id) (1)
+#define ST730X_HAS_MULTIPLE_BPP(node_id) \
+	UTIL_OR(IS_EQ(ST730X_BPPX(node_id), 2), \
+		IS_EQ(COND_CASE_1(0, (0), ST730X_BPPY(node_id)), 2))
 
 #define ST730X_CONV_BUFFER_SIZE(node_id)                                                           \
 	ROUND_UP((DT_PROP(node_id, width) * CONFIG_ST730X_CONV_BUFFER_LINE_CNT                     \
@@ -778,6 +780,13 @@ static const struct st730x_specific st7306_specifics = {
 
 #define ST730X_DEFINE_MIPI(node_id, specifics_ptr)                                                 \
 	static uint8_t conversion_buf##node_id[ST730X_CONV_BUFFER_SIZE(node_id)];                  \
+	static const pixel_format_t supported_pixel_formats##node_id[] = {                         \
+		PIXEL_FORMAT_MONO01,                                                               \
+		IF_ENABLED(ST730X_HAS_MULTIPLE_BPP(node_id), (PIXEL_FORMAT_I_4,))                  \
+		IF_ENABLED(CONFIG_DISPLAY_COLOR_DITHER,                                            \
+			   (IF_ENABLED(ST730X_IS_RBW(node_id), (COLOR_DITHER_SUPPORTED_FORMATS,))))\
+		0,                                                                                 \
+	};                                                                                         \
 	IF_ENABLED(CONFIG_DISPLAY_COLOR_DITHER, (IF_ENABLED(ST730X_IS_RBW(node_id),                \
 		(DISPLAY_COLOR_DITHER_DEFINE(node_id);))))                                         \
 	static struct st730x_data data##node_id = {                                                \
@@ -816,6 +825,7 @@ static const struct st730x_specific st7306_specifics = {
 		.is_rbw = ST730X_IS_RBW(node_id),                                                  \
 		.bppx = ST730X_BPPX(node_id),                                                      \
 		.bppy = ST730X_BPPY(node_id),                                                      \
+		.supported_pixel_formats = supported_pixel_formats##node_id,                       \
 		.mono_color = DT_PROP_OR(node_id, mono_color, 0),                                  \
 		IF_ENABLED(CONFIG_DISPLAY_COLOR_PALETTE, (IF_ENABLED(ST730X_IS_RBW(node_id),       \
 		(.color_palette = DT_PROP_OR(DT_CHILD(node_id, color_palette), colors, {}),))))    \
